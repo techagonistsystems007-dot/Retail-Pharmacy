@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retail Pharmacy AI Price & Box Scanner</title>
+  <!-- Tesseract.js Client-Side OCR Library -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #eef2f5; padding: 15px; color: #333; }
+    .container { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 14px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    h2 { text-align: center; color: #0d6efd; margin-bottom: 15px; font-size: 1.3rem; font-weight: 700; }
+    
+    /* Camera Scanner Frame */
+    .scanner-box { position: relative; width: 100%; height: 260px; background: #000; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .overlay { position: absolute; border: 2px dashed #00ff88; width: 85%; height: 65%; border-radius: 8px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.45); pointer-events: none; }
+    .overlay-text { position: absolute; top: 10px; color: #fff; font-size: 11px; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px; }
+    
+    /* Action Buttons */
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: all 0.2s ease-in-out; }
+    .btn-scan { background: #0d6efd; color: #fff; }
+    .btn-scan:hover { background: #0b5ed7; }
+    .btn-save { background: #198754; color: #fff; display: none; }
+    .btn-save:hover { background: #157347; }
+    
+    /* Form Inputs */
+    .form-group { margin-top: 10px; }
+    label { font-size: 12px; font-weight: 700; color: #495057; display: block; margin-bottom: 4px; text-transform: uppercase; }
+    input { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    input:focus { border-color: #0d6efd; }
+    
+    /* Status Box */
+    #status { text-align: center; margin-top: 12px; font-weight: 600; color: #fd7e14; font-size: 13px; min-height: 20px; }
+    #canvas { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>💊 Pharmacy Box & Price Scanner</h2>
+  
+  <!-- Camera Feed Viewfinder -->
+  <div class="scanner-box">
+    <video id="video" autoplay playsinline></video>
+    <div class="overlay"></div>
+    <div class="overlay-text">किंमत / डिटेल्स चौकटीच्या आत ठेवा</div>
+  </div>
+  
+  <button id="scanBtn" class="btn btn-scan" onclick="captureAndProcess()">📷 Scan Box & Price</button>
+  <div id="status">कॅमेरा चालू होत आहे...</div>
+
+  <canvas id="canvas"></canvas>
+
+  <!-- Extracted Form Fields -->
+  <div class="form-group">
+    <label>Product Name (औषधाचे नाव)</label>
+    <input type="text" id="prodName" placeholder="उदा. FreshEye Drops / ALKEM Syrup">
+  </div>
+  <div class="form-group">
+    <label>Batch No.</label>
+    <input type="text" id="batchNo" placeholder="Batch Number">
+  </div>
+  <div class="form-group">
+    <label>Mfg Date</label>
+    <input type="text" id="mfgDate" placeholder="MM/YYYY">
+  </div>
+  <div class="form-group">
+    <label>Expiry Date</label>
+    <input type="text" id="expDate" placeholder="MM/YYYY">
+  </div>
+  <div class="form-group">
+    <label>MRP (₹)</label>
+    <input type="text" id="mrp" placeholder="0.00">
+  </div>
+
+  <button id="saveBtn" class="btn btn-save" onclick="sendToGoogleSheet()">☁️ Save to Google Sheet</button>
+</div>
+
+<script>
+  // Deploy केलेली Web App URL
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-DtyvWEBpR9WZ_DiAZBLvwd0S74fJMC6wAE3RQSDbFF2BfcHji-R6BxoC4dDWOPip/exec";
+
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const status = document.getElementById('status');
+  let capturedImageData = "";
+
+  // १. बॅक कॅमेरा सुरू करणे
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then(stream => {
+      video.srcObject = stream;
+      status.innerText = "कॅमेरा तयार आहे. बॉक्स फ्रेममध्ये ठेवून 'Scan' दाबा.";
+    })
+    .catch(err => {
+      status.innerText = "कॅमेरा सुरू करण्यात त्रुटी: " + err;
+    });
+
+  // २. इमेज कॅप्चर करून Tesseract AI द्वारे OCR करणे
+  async function captureAndProcess() {
+    const context = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    capturedImageData = canvas.toDataURL('image/jpeg', 0.85);
+    
+    status.innerText = "🔍 AI द्वारे मजकूर स्कॅन होत आहे... कृपया थांबा.";
+    
+    try {
+      const result = await Tesseract.recognize(capturedImageData, 'eng');
+      const text = result.data.text;
+      
+      parseTextAndFillForm(text);
+      status.innerText = "✅ स्कॅनिंग पूर्ण! आवश्यक ते बदल करून 'Save' दाबा.";
+      document.getElementById('saveBtn').style.display = "block";
+    } catch(e) {
+      status.innerText = "❌ इमेज वाचताना त्रुटी आली. पुन्हा प्रयत्न करा.";
+    }
+  }
+
+  // ३. Regex वापरून एक्सट्रॅक्ट झालेला डेटा इनपुट बॉक्समध्ये भरणे
+  function parseTextAndFillForm(text) {
+    const batchMatch = text.match(/(?:Batch\s*No\.?|Batch\s*:)\s*([A-Z0-9-]+)/i);
+    const mfgMatch = text.match(/(?:Mfg\.?\s*Date|Mfg\s*:)\s*(\d{2}[-/]\d{4}|\d{2}[-/]\d{2})/i);
+    const expMatch = text.match(/(?:Exp\.?\s*Date|Expiry\s*Date|Exp\s*:)\s*(\d{2}[-/]\d{4}|\d{2}[-/]\d{2})/i);
+    const mrpMatch = text.match(/(?:M\.?R\.?P\.?\s*₹?|MRP\s*₹?)\s*:?\s*([\d.]+)/i);
+
+    if (batchMatch) document.getElementById('batchNo').value = batchMatch[1].trim();
+    if (mfgMatch) document.getElementById('mfgDate').value = mfgMatch[1].trim();
+    if (expMatch) document.getElementById('expDate').value = expMatch[1].trim();
+    if (mrpMatch) document.getElementById('mrp').value = mrpMatch[1].trim();
+  }
+
+  // ४. डेटा आणि कॅप्चर केलेला फोटो Google Sheet मध्ये सेव्ह करणे
+  function sendToGoogleSheet() {
+    status.innerText = "⏳ Google Sheet मध्ये डेटा आणि फोटो सेव्ह होत आहे...";
+    
+    const payload = {
+      productName: document.getElementById('prodName').value,
+      batch: document.getElementById('batchNo').value,
+      mfg: document.getElementById('mfgDate').value,
+      exp: document.getElementById('expDate').value,
+      mrp: document.getElementById('mrp').value,
+      image: capturedImageData
+    };
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if(data.status === "success") {
+        status.innerText = "🎉 डेटा व फोटो Google Sheet मध्ये सेव्ह झाला!";
+        document.getElementById('saveBtn').style.display = "none";
+      } else {
+        status.innerText = "❌ त्रुटी: " + data.message;
+      }
+    })
+    .catch(err => {
+      status.innerText = "❌ नेटवर्क त्रुटी: " + err;
+    });
+  }
+</script>
+</body>
+</html>
