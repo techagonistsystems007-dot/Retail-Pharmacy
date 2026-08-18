@@ -2,219 +2,259 @@
 <html lang="mr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fast Pharma OCR Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>रिटेल फार्मसी OCR सॉफ्टवेअर</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #0f172a; color: #f8fafc; padding: 12px; }
-    .container { max-width: 450px; margin: 0 auto; }
-    
-    .scanner-box { 
-      position: relative; 
-      width: 100%; 
-      height: 280px; 
-      background: #000; 
-      border-radius: 14px; 
-      overflow: hidden; 
-      border: 2px solid #3b82f6; 
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    body {
+      background-color: #f4f6f9;
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      padding-top: 30px;
+      padding-bottom: 50px;
     }
-    video { width: 100%; height: 100%; object-fit: cover; }
-    .overlay { 
-      position: absolute; 
-      top: 12%; 
-      left: 6%; 
-      width: 88%; 
-      height: 76%; 
-      border: 2px dashed #22c55e; 
-      border-radius: 10px; 
-      box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.55); 
-      pointer-events: none; 
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+      border: none;
     }
-    
-    .status-badge { 
-      text-align: center; 
-      margin: 12px 0; 
-      font-weight: 600; 
-      font-size: 14px; 
-      color: #38bdf8; 
-      min-height: 22px; 
+    .preview-box {
+      max-height: 320px;
+      object-fit: contain;
+      width: 100%;
+      border-radius: 8px;
+      border: 2px dashed #0d6efd;
+      padding: 8px;
+      background-color: #fff;
     }
-    
-    .btn { 
-      width: 100%; 
-      padding: 15px; 
-      border: none; 
-      border-radius: 10px; 
-      font-weight: 700; 
-      font-size: 16px; 
-      cursor: pointer; 
-      transition: all 0.2s ease; 
+    .table-responsive {
+      max-height: 480px;
     }
-    .btn-scan { background: #2563eb; color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.4); }
-    .btn-scan:active { transform: scale(0.98); }
-    .btn-scan:disabled { background: #475569; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
-
-    .form-box { background: #1e293b; padding: 14px; border-radius: 12px; margin-top: 14px; border: 1px solid #334155; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
-    input { 
-      width: 100%; 
-      padding: 10px; 
-      background: #0f172a; 
-      border: 1px solid #334155; 
-      border-radius: 8px; 
-      color: #38bdf8; 
-      font-size: 14px; 
-      font-weight: 600;
-      margin-top: 4px; 
+    .table th {
+      background-color: #0d6efd;
+      color: white;
+      white-space: nowrap;
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="scanner-box">
-    <video id="video" autoplay playsinline></video>
-    <div class="overlay"></div>
-  </div>
-  
-  <div id="status" class="status-badge">⚡ कॅमेरा कनेक्ट होत आहे...</div>
-  <button id="scanBtn" class="btn btn-scan" onclick="captureAndSend()">📷 Instant 1-Sec Scan</button>
-
-  <div class="form-box">
-    <div>
-      <label>Product Name</label>
-      <input type="text" id="prodName" placeholder="Product Name (Optional)">
+  <!-- Title Section -->
+  <div class="row mb-4">
+    <div class="col-12 text-center">
+      <h2 class="fw-bold text-primary">🏥 रिटेल फार्मसी OCR सॉफ्टवेअर</h2>
+      <p class="text-muted">औषधांच्या बिलाचा फोटो अपलोड करा आणि आपोआप सर्व माहिती तक्त्यामध्ये मिळवा</p>
     </div>
-    <div class="grid" style="margin-top: 10px;">
-      <div>
-        <label>Batch No.</label>
-        <input type="text" id="batchNo" readonly placeholder="-">
+  </div>
+
+  <div class="row g-4">
+    <!-- डावी बाजू: इमेज अपलोड व प्रिव्ह्यू -->
+    <div class="col-lg-5">
+      <div class="card p-4">
+        <h5 class="card-title fw-semibold mb-3">१. इन्व्हॉईस / बिल अपलोड करा</h5>
+        
+        <input type="file" id="imageInput" class="form-control mb-3" accept="image/*" onchange="previewImage(event)">
+        
+        <div class="text-center mb-3">
+          <img id="imagePreview" class="preview-box d-none" alt="Invoice Preview">
+        </div>
+
+        <button id="processBtn" class="btn btn-primary w-100 py-2 fw-semibold" onclick="uploadAndProcess()" disabled>
+          <span id="btnSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status"></span>
+          <span id="btnText">स्कॅन आणि डेटा एक्स्ट्रॅक्ट करा</span>
+        </button>
+
+        <div id="statusAlert" class="alert mt-3 d-none" role="alert"></div>
       </div>
-      <div>
-        <label>MRP (₹)</label>
-        <input type="text" id="mrp" readonly placeholder="-">
-      </div>
-      <div>
-        <label>Mfg Date</label>
-        <input type="text" id="mfgDate" readonly placeholder="-">
-      </div>
-      <div>
-        <label>Exp Date</label>
-        <input type="text" id="expDate" readonly placeholder="-">
+    </div>
+
+    <!-- उजवी बाजू: एक्स्ट्रॅक्ट झालेला डेटा -->
+    <div class="col-lg-7">
+      <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="card-title fw-semibold mb-0">२. औषधांची माहिती (Extracted Items)</h5>
+          <button class="btn btn-sm btn-outline-primary" onclick="addRow()">+ नवीन रो जोडा</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover align-middle" id="itemsTable">
+            <thead>
+              <tr class="text-center">
+                <th style="min-width: 150px;">औषधाचे नाव</th>
+                <th style="min-width: 90px;">बॅच क्र.</th>
+                <th style="min-width: 80px;">Exp.</th>
+                <th style="min-width: 70px;">Qty</th>
+                <th style="min-width: 80px;">MRP</th>
+                <th style="min-width: 80px;">दर (Rate)</th>
+                <th style="min-width: 75px;">GST %</th>
+                <th style="min-width: 90px;">एकूण</th>
+                <th style="min-width: 50px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="9" class="text-center text-muted py-5">
+                  कोणतीही इमेज स्कॅन केलेली नाही.<br>कृपया डावीकडून बिल फोटो अपलोड करा.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </div>
   </div>
 </div>
 
-<canvas id="canvas" style="display:none;"></canvas>
-
 <script>
-  // तुमची नवीन Deployed Web App URL
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySK7KAYBw8M3WIdRff-svjcI1kF3rztyxRpZizXjnsDQpO7bx8sOSkzwjtK4VK3U1V/exec";
+  // Deploy झालेली Apps Script Web App URL
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8uhN9m-zXxOR4F4TBxUHF-4TMyPHYBxZ-EZq9odsFP0AaGm3xZLUD5P73JujUvIga/exec";
 
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const status = document.getElementById('status');
-  const scanBtn = document.getElementById('scanBtn');
+  let base64ImageData = "";
+  let imageMimeType = "image/jpeg";
 
-  // BEEP SOUND ON SUCCESS
-  function playTickSound() {
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1400, audioCtx.currentTime); 
-      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.1);
-    } catch(e) {}
-  }
+  // फोटोचा प्रिव्ह्यू दाखवणे
+  function previewImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-  // START CAMERA
-  navigator.mediaDevices.getUserMedia({ 
-    video: { 
-      facingMode: "environment",
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
-    } 
-  })
-  .then(stream => { 
-    video.srcObject = stream; 
-    status.innerText = "🎯 स्ट्रिप फ्रेममध्ये धरा आणि स्कॅन करा."; 
-  })
-  .catch(err => { 
-    status.innerText = "❌ कॅमेरा परवानगी द्या."; 
-  });
+    imageMimeType = file.type || "image/jpeg";
+    const reader = new FileReader();
 
-  // SCAN AND SUBMIT
-  function captureAndSend() {
-    status.innerText = "⚡ Processing Scan...";
-    scanBtn.disabled = true;
-
-    document.getElementById('batchNo').value = "Scanning...";
-    document.getElementById('mfgDate').value = "Scanning...";
-    document.getElementById('expDate').value = "Scanning...";
-    document.getElementById('mrp').value = "Scanning...";
-
-    const context = canvas.getContext('2d');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Image Grayscale + Contrast Adjust for Sharp OCR
-    let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
-    let d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      let avg = (d[i] + d[i + 1] + d[i + 2]) / 3;
-      let v = (avg > 110) ? 255 : 0;
-      d[i] = v; d[i + 1] = v; d[i + 2] = v;
-    }
-    context.putImageData(imgData, 0, 0);
-
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-
-    const payload = {
-      productName: document.getElementById('prodName').value || "Auto Scanned Item",
-      image: imageData
+    reader.onload = function(e) {
+      const img = document.getElementById("imagePreview");
+      img.src = e.target.result;
+      img.classList.remove("d-none");
+      
+      // Base64 स्ट्रींगमधून Header डेटा काढणे
+      base64ImageData = e.target.result.split(',')[1];
+      
+      document.getElementById("processBtn").disabled = false;
+      showAlert("फोटो निवडला गेला आहे. आता स्कॅन बटणावर क्लिक करा.", "info");
     };
 
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-      scanBtn.disabled = false;
+    reader.readAsDataURL(file);
+  }
 
-      if(data.status === "success") {
-        playTickSound();
+  // Web App वर डेटा पाठवून OCR प्रोसेसिंग करणे
+  async function uploadAndProcess() {
+    if (!base64ImageData) {
+      showAlert("कृपया प्रथम इमेज निवडा!", "danger");
+      return;
+    }
 
-        document.getElementById('batchNo').value = data.batch || "N/A";
-        document.getElementById('mfgDate').value = data.mfg || "N/A";
-        document.getElementById('expDate').value = data.exp || "N/A";
-        document.getElementById('mrp').value = data.mrp || "N/A";
+    setLoading(true);
+    showAlert("Gemini AI बिल स्कॅन करत आहे, कृपया काही सेकंद वाट पाहा...", "info");
 
-        status.innerText = "✅ १-सेकंदात Scan पूर्ण व Sheet मध्ये सेव्ह!";
+    try {
+      // POST रिक्वेस्ट पाठवणे (CORS Bypass साठी URLSearchParams किंवा direct JSON)
+      const response = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify({
+          image: base64ImageData,
+          mimeType: imageMimeType
+        })
+      });
+
+      const result = await response.json();
+
+      setLoading(false);
+
+      if (result.success) {
+        showAlert("डेटा यशस्वीरित्या एक्स्ट्रॅक्ट झाला आहे!", "success");
+        renderTable(result.data);
       } else {
-        status.innerText = "❌ त्रुटी: " + data.message;
+        showAlert("त्रुटी: " + (result.error || "डेटा एक्स्ट्रॅक्ट करता आला नाही."), "danger");
       }
-    })
-    .catch(err => {
-      scanBtn.disabled = false;
-      status.innerText = "❌ नेटवर्क त्रुटी. पुन्हा प्रयत्न करा.";
+
+    } catch (err) {
+      setLoading(false);
+      showAlert("कनेक्शन एरर: " + err.message, "danger");
+    }
+  }
+
+  // टेबलमध्ये डेटा भरणे
+  function renderTable(data) {
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">माहिती शोधता आली नाही.</td></tr>';
+      return;
+    }
+
+    data.forEach((item) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm" value="${item.item_name || ''}"></td>
+        <td><input type="text" class="form-control form-control-sm" value="${item.batch_no || ''}"></td>
+        <td><input type="text" class="form-control form-control-sm" value="${item.exp_date || ''}"></td>
+        <td><input type="number" class="form-control form-control-sm" value="${item.qty || 0}"></td>
+        <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.mrp || 0}"></td>
+        <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.rate || 0}"></td>
+        <td><input type="number" class="form-control form-control-sm" value="${item.gst_percent || 0}"></td>
+        <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.amount || 0}"></td>
+        <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRow(this)">✕</button></td>
+      `;
+      tbody.appendChild(tr);
     });
   }
+
+  // नवीन रो जोडणे
+  function addRow() {
+    const tbody = document.getElementById("tableBody");
+    if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
+      tbody.innerHTML = "";
+    }
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" class="form-control form-control-sm" value=""></td>
+      <td><input type="text" class="form-control form-control-sm" value=""></td>
+      <td><input type="text" class="form-control form-control-sm" value=""></td>
+      <td><input type="number" class="form-control form-control-sm" value="0"></td>
+      <td><input type="number" step="0.01" class="form-control form-control-sm" value="0"></td>
+      <td><input type="number" step="0.01" class="form-control form-control-sm" value="0"></td>
+      <td><input type="number" class="form-control form-control-sm" value="0"></td>
+      <td><input type="number" step="0.01" class="form-control form-control-sm" value="0"></td>
+      <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRow(this)">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // रो डिलीट करणे
+  function deleteRow(btn) {
+    const row = btn.closest("tr");
+    row.remove();
+  }
+
+  // लोड होत असताना बटण आणि स्पिनर कंट्रोल
+  function setLoading(isLoading) {
+    const btn = document.getElementById("processBtn");
+    const spinner = document.getElementById("btnSpinner");
+    const btnText = document.getElementById("btnText");
+
+    btn.disabled = isLoading;
+    if (isLoading) {
+      spinner.classList.remove("d-none");
+      btnText.textContent = "प्रक्रिया सुरू आहे...";
+    } else {
+      spinner.classList.add("d-none");
+      btnText.textContent = "स्कॅन आणि डेटा एक्स्ट्रॅक्ट करा";
+    }
+  }
+
+  // अलर्ट दाखवणे
+  function showAlert(message, type) {
+    const alertBox = document.getElementById("statusAlert");
+    alertBox.className = `alert alert-${type} mt-3`;
+    alertBox.textContent = message;
+    alertBox.classList.remove("d-none");
+  }
 </script>
+
 </body>
 </html>
