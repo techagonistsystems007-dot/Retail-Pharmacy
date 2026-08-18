@@ -2,70 +2,72 @@
 <html lang="mr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fast Pharmacy Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fast Pharma OCR Scanner</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background: #121212; color: #fff; padding: 12px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 12px; }
     .container { max-width: 450px; margin: 0 auto; }
     
     .scanner-box { 
       position: relative; 
       width: 100%; 
-      height: 260px; 
+      height: 280px; 
       background: #000; 
-      border-radius: 12px; 
+      border-radius: 14px; 
       overflow: hidden; 
-      border: 2px solid #333; 
+      border: 2px solid #3b82f6; 
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     }
     video { width: 100%; height: 100%; object-fit: cover; }
     .overlay { 
       position: absolute; 
-      top: 15%; 
-      left: 8%; 
-      width: 84%; 
-      height: 70%; 
-      border: 2px dashed #00ff88; 
-      border-radius: 8px; 
-      box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); 
+      top: 12%; 
+      left: 6%; 
+      width: 88%; 
+      height: 76%; 
+      border: 2px dashed #22c55e; 
+      border-radius: 10px; 
+      box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.55); 
       pointer-events: none; 
     }
     
     .status-badge { 
       text-align: center; 
       margin: 12px 0; 
-      font-weight: bold; 
+      font-weight: 600; 
       font-size: 14px; 
-      color: #00ff88; 
-      min-height: 20px; 
+      color: #38bdf8; 
+      min-height: 22px; 
     }
     
     .btn { 
       width: 100%; 
-      padding: 14px; 
+      padding: 15px; 
       border: none; 
-      border-radius: 8px; 
-      font-weight: bold; 
+      border-radius: 10px; 
+      font-weight: 700; 
       font-size: 16px; 
       cursor: pointer; 
-      transition: 0.2s; 
+      transition: all 0.2s ease; 
     }
-    .btn-scan { background: #0d6efd; color: #fff; }
+    .btn-scan { background: #2563eb; color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.4); }
     .btn-scan:active { transform: scale(0.98); }
-    .btn-scan:disabled { background: #555; cursor: not-allowed; }
+    .btn-scan:disabled { background: #475569; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
 
-    .form-box { background: #1e1e1e; padding: 12px; border-radius: 10px; margin-top: 12px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    label { font-size: 11px; color: #aaa; text-transform: uppercase; font-weight: 600; }
+    .form-box { background: #1e293b; padding: 14px; border-radius: 12px; margin-top: 14px; border: 1px solid #334155; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
     input { 
       width: 100%; 
-      padding: 8px; 
-      background: #2a2a2a; 
-      border: 1px solid #444; 
-      border-radius: 6px; 
-      color: #fff; 
-      font-size: 13px; 
-      margin-top: 2px; 
+      padding: 10px; 
+      background: #0f172a; 
+      border: 1px solid #334155; 
+      border-radius: 8px; 
+      color: #38bdf8; 
+      font-size: 14px; 
+      font-weight: 600;
+      margin-top: 4px; 
     }
   </style>
 </head>
@@ -77,15 +79,15 @@
     <div class="overlay"></div>
   </div>
   
-  <div id="status" class="status-badge">⚡ कॅमेरा सुरू होत आहे...</div>
+  <div id="status" class="status-badge">⚡ कॅमेरा कनेक्ट होत आहे...</div>
   <button id="scanBtn" class="btn btn-scan" onclick="captureAndSend()">📷 Instant 1-Sec Scan</button>
 
   <div class="form-box">
     <div>
       <label>Product Name</label>
-      <input type="text" id="prodName" placeholder="Product Name टाक किंवा रिकामे ठेव">
+      <input type="text" id="prodName" placeholder="Product Name (Optional)">
     </div>
-    <div class="grid" style="margin-top: 8px;">
+    <div class="grid" style="margin-top: 10px;">
       <div>
         <label>Batch No.</label>
         <input type="text" id="batchNo" readonly placeholder="-">
@@ -109,65 +111,74 @@
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-  // तुमची Deployed Web App URL
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyEQH-jw9f8lX8OQOKHGgRnwWuUMt55PYoizeABv-sCARL8IEhTh5XgP2r7Qkoo3Bnm/exec";
+  // तुमची नवीन Deployed Web App URL
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySK7KAYBw8M3WIdRff-svjcI1kF3rztyxRpZizXjnsDQpO7bx8sOSkzwjtK4VK3U1V/exec";
 
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
   const status = document.getElementById('status');
   const scanBtn = document.getElementById('scanBtn');
 
-  // १. बीप साउंड प्ले करण्यासाठी (Scan यशस्वी झाल्यावर)
+  // BEEP SOUND ON SUCCESS
   function playTickSound() {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, audioCtx.currentTime); 
+      osc.frequency.setValueAtTime(1400, audioCtx.currentTime); 
       gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.08);
+      osc.stop(audioCtx.currentTime + 0.1);
     } catch(e) {}
   }
 
-  // २. बॅक (मागील) कॅमेरा स्टार्ट करणे
+  // START CAMERA
   navigator.mediaDevices.getUserMedia({ 
     video: { 
       facingMode: "environment",
-      width: { ideal: 1280 },
-      height: { ideal: 720 }
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
     } 
   })
   .then(stream => { 
     video.srcObject = stream; 
-    status.innerText = "🎯 स्ट्रिप हिरव्या बॉक्समध्ये ठेवा आणि स्कॅन दाबा."; 
+    status.innerText = "🎯 स्ट्रिप फ्रेममध्ये धरा आणि स्कॅन करा."; 
   })
   .catch(err => { 
-    status.innerText = "❌ कॅमेरा सुरू होऊ शकला नाही. परवानगी तपासा."; 
+    status.innerText = "❌ कॅमेरा परवानगी द्या."; 
   });
 
-  // ३. १-सेकंद इन्स्टंट कॅप्चर आणि Apps Script OCR ला पाठवणे
+  // SCAN AND SUBMIT
   function captureAndSend() {
-    status.innerText = "⚡ Scanning & Extracting...";
+    status.innerText = "⚡ Processing Scan...";
     scanBtn.disabled = true;
 
-    // फॉर्म फील्ड्स रीसेट करणे
-    document.getElementById('batchNo').value = "...";
-    document.getElementById('mfgDate').value = "...";
-    document.getElementById('expDate').value = "...";
-    document.getElementById('mrp').value = "...";
+    document.getElementById('batchNo').value = "Scanning...";
+    document.getElementById('mfgDate').value = "Scanning...";
+    document.getElementById('expDate').value = "Scanning...";
+    document.getElementById('mrp').value = "Scanning...";
 
     const context = canvas.getContext('2d');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // इमेज आकुंचन (Fast Transfer साठी JPEG quality 0.75)
-    const imageData = canvas.toDataURL('image/jpeg', 0.75);
+    // Image Grayscale + Contrast Adjust for Sharp OCR
+    let imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+    let d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      let avg = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      let v = (avg > 110) ? 255 : 0;
+      d[i] = v; d[i + 1] = v; d[i + 2] = v;
+    }
+    context.putImageData(imgData, 0, 0);
+
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
 
     const payload = {
       productName: document.getElementById('prodName').value || "Auto Scanned Item",
@@ -176,6 +187,10 @@
 
     fetch(APPS_SCRIPT_URL, {
       method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
       body: JSON.stringify(payload)
     })
     .then(res => res.json())
@@ -183,22 +198,21 @@
       scanBtn.disabled = false;
 
       if(data.status === "success") {
-        playTickSound(); // बीप आवाज
+        playTickSound();
 
         document.getElementById('batchNo').value = data.batch || "N/A";
         document.getElementById('mfgDate').value = data.mfg || "N/A";
         document.getElementById('expDate').value = data.exp || "N/A";
         document.getElementById('mrp').value = data.mrp || "N/A";
 
-        status.innerText = "✅ १ सेकंदात स्कॅन झाले व Sheet मध्ये एंट्री झाली!";
+        status.innerText = "✅ १-सेकंदात Scan पूर्ण व Sheet मध्ये सेव्ह!";
       } else {
-        status.innerText = "❌ Error: " + (data.message || "स्कॅन अयशस्वी");
+        status.innerText = "❌ त्रुटी: " + data.message;
       }
     })
     .catch(err => {
       scanBtn.disabled = false;
       status.innerText = "❌ नेटवर्क त्रुटी. पुन्हा प्रयत्न करा.";
-      console.error(err);
     });
   }
 </script>
