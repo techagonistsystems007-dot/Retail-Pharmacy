@@ -10,7 +10,7 @@
     body {
       background-color: #f0f4f8;
       font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      padding: 25px 0;
+      padding: 20px 0;
     }
     .card {
       border-radius: 12px;
@@ -20,7 +20,7 @@
     #videoElement {
       width: 100%;
       height: auto;
-      max-height: 300px;
+      max-height: 280px;
       border-radius: 8px;
       background: #000;
       object-fit: cover;
@@ -37,14 +37,13 @@
 <body>
 
 <div class="container">
-  <!-- Title -->
   <div class="text-center mb-4">
     <h3 class="fw-bold text-primary">💊 Pharma Product Label Scanner</h3>
     <p class="text-muted">औषधाचा बॉक्स किंवा स्ट्रिप कॅमेऱ्यासमोर धरा आणि एका क्लिकवर सर्व माहिती मिळवा</p>
   </div>
 
   <div class="row g-4 justify-content-center">
-    <!-- १. कॅमेरा व अपलोड विभाग -->
+    <!-- १. कॅमेरा व फाईल अपलोड -->
     <div class="col-md-6 col-lg-5">
       <div class="card p-3 text-center">
         <h6 class="fw-bold mb-2">📷 Live Camera Scanner</h6>
@@ -61,7 +60,7 @@
         </div>
 
         <div class="mt-3">
-          <label class="form-label small text-muted">किंवा गॅलरीमधून प्रॉडक्टचा फोटो निवडा:</label>
+          <label class="form-label small text-muted">किंवा गॅलरीमधून फोटो निवडा:</label>
           <input type="file" id="fileInput" class="form-control form-control-sm" accept="image/*" onchange="handleFileSelect(event)">
         </div>
 
@@ -120,18 +119,17 @@
 </div>
 
 <script>
-  // नवीन Deploy झालेली URL
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8uhN9m-zXxOR4F4TBxUHF-4TMyPHYBxZ-EZq9odsFP0AaGm3xZLUD5P73JujUvIga/exec";
+  // नवीन Deployment URL
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOmcHUDAe_Ntmqhsm3xA7794i3b7DoU6qGyw5DT5yK-21iZU-GFIfdyHmcSqJqWcMX/exec";
 
   const video = document.getElementById('videoElement');
   const canvas = document.getElementById('canvasElement');
-  let currentBase64 = "";
 
-  // १. कॅमेरा चालू करणे
+  // १. कॅमेरा सुरू करणे
   async function startCamera() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment" } // मोबाईलवर बॅक कॅमेरा वापरण्यासाठी
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       video.srcObject = stream;
       document.getElementById('captureBtn').disabled = false;
@@ -141,17 +139,21 @@
     }
   }
 
-  // २. कॅमेऱ्यातून फोटो काढून AI ला पाठवणे
+  // २. कॅमेऱ्यातून फोटो काढून रीसाईझ करणे व पाठवणे
   function captureAndScan() {
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    const maxWidth = 800; // इमेज साईझ लहान ठेवून टायमाऊट टाळण्यासाठी
+    const scale = maxWidth / (video.videoWidth || 800);
+    
+    canvas.width = maxWidth;
+    canvas.height = (video.videoHeight || 600) * scale;
+
     const context = canvas.getContext('2d');
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    const dataUrl = canvas.toDataURL('image/jpeg');
-    currentBase64 = dataUrl.split(',')[1];
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // 80% Quality Compression
+    const base64Data = dataUrl.split(',')[1];
 
-    sendToAI(currentBase64, "image/jpeg");
+    sendToAI(base64Data, "image/jpeg");
   }
 
   // ३. गॅलरीतून फोटो निवडल्यास
@@ -161,22 +163,44 @@
 
     const reader = new FileReader();
     reader.onload = function(e) {
-      currentBase64 = e.target.result.split(',')[1];
-      sendToAI(currentBase64, file.type || "image/jpeg");
+      const img = new Image();
+      img.onload = function() {
+        const maxWidth = 800;
+        const scale = maxWidth / img.width;
+        
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        sendToAI(resizedBase64, "image/jpeg");
+      };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   }
 
-  // ४. Apps Script Web App कडे इमेज पाठवणे
+  // ४. Web App कडे सुरक्षितपणे डेटा पाठवणे
   async function sendToAI(base64Data, mimeType) {
     setLoading(true);
     showAlert("Gemini AI प्रॉडक्टवरील लेबल वाचत आहे...", "info");
 
     try {
+      const payload = {
+        image: base64Data,
+        mimeType: mimeType
+      };
+
       const response = await fetch(SCRIPT_URL, {
         method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ image: base64Data, mimeType: mimeType })
+        mode: "cors",
+        redirect: "follow",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
@@ -186,7 +210,7 @@
         showAlert("माहिती यशस्वीरित्या मिळवली!", "success");
         fillForm(result.data);
       } else {
-        showAlert("त्रुटी: " + result.error, "danger");
+        showAlert("त्रुटी: " + (result.error || "डेटा वाचता आला नाही."), "danger");
       }
     } catch (err) {
       setLoading(false);
@@ -227,7 +251,6 @@
     alertBox.classList.remove("d-none");
   }
 
-  // पेज ओपन होताच आपोआप कॅमेरा स्टार्ट करणे
   window.onload = startCamera;
 </script>
 
