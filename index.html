@@ -3,257 +3,232 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>रिटेल फार्मसी OCR सॉफ्टवेअर</title>
+  <title>Pharma Product Label Scanner</title>
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
-      background-color: #f4f6f9;
+      background-color: #f0f4f8;
       font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      padding-top: 30px;
-      padding-bottom: 50px;
+      padding: 25px 0;
     }
     .card {
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
       border: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     }
-    .preview-box {
-      max-height: 320px;
-      object-fit: contain;
+    #videoElement {
       width: 100%;
+      height: auto;
+      max-height: 300px;
       border-radius: 8px;
-      border: 2px dashed #0d6efd;
-      padding: 8px;
-      background-color: #fff;
+      background: #000;
+      object-fit: cover;
     }
-    .table-responsive {
-      max-height: 480px;
+    #canvasElement {
+      display: none;
     }
-    .table th {
-      background-color: #0d6efd;
-      color: white;
-      white-space: nowrap;
+    .result-card {
+      background: #ffffff;
+      border-left: 5px solid #0d6efd;
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- Title Section -->
-  <div class="row mb-4">
-    <div class="col-12 text-center">
-      <h2 class="fw-bold text-primary">🏥 रिटेल फार्मसी OCR सॉफ्टवेअर</h2>
-      <p class="text-muted">औषधांच्या बिलाचा फोटो अपलोड करा आणि आपोआप सर्व माहिती तक्त्यामध्ये मिळवा</p>
-    </div>
+  <!-- Title -->
+  <div class="text-center mb-4">
+    <h3 class="fw-bold text-primary">💊 Pharma Product Label Scanner</h3>
+    <p class="text-muted">औषधाचा बॉक्स किंवा स्ट्रिप कॅमेऱ्यासमोर धरा आणि एका क्लिकवर सर्व माहिती मिळवा</p>
   </div>
 
-  <div class="row g-4">
-    <!-- डावी बाजू: इमेज अपलोड व प्रिव्ह्यू -->
-    <div class="col-lg-5">
-      <div class="card p-4">
-        <h5 class="card-title fw-semibold mb-3">१. इन्व्हॉईस / बिल अपलोड करा</h5>
+  <div class="row g-4 justify-content-center">
+    <!-- १. कॅमेरा व अपलोड विभाग -->
+    <div class="col-md-6 col-lg-5">
+      <div class="card p-3 text-center">
+        <h6 class="fw-bold mb-2">📷 Live Camera Scanner</h6>
         
-        <input type="file" id="imageInput" class="form-control mb-3" accept="image/*" onchange="previewImage(event)">
-        
-        <div class="text-center mb-3">
-          <img id="imagePreview" class="preview-box d-none" alt="Invoice Preview">
+        <video id="videoElement" autoplay playsinline></video>
+        <canvas id="canvasElement"></canvas>
+
+        <div class="d-grid gap-2 mt-3">
+          <button id="startCamBtn" class="btn btn-outline-secondary btn-sm" onclick="startCamera()">कॅमेरा सुरू करा</button>
+          <button id="captureBtn" class="btn btn-primary fw-bold" onclick="captureAndScan()" disabled>
+            <span id="btnSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status"></span>
+            <span id="btnText">📸 फोटो काढा आणि स्कॅन करा</span>
+          </button>
         </div>
 
-        <button id="processBtn" class="btn btn-primary w-100 py-2 fw-semibold" onclick="uploadAndProcess()" disabled>
-          <span id="btnSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status"></span>
-          <span id="btnText">स्कॅन आणि डेटा एक्स्ट्रॅक्ट करा</span>
-        </button>
+        <div class="mt-3">
+          <label class="form-label small text-muted">किंवा गॅलरीमधून प्रॉडक्टचा फोटो निवडा:</label>
+          <input type="file" id="fileInput" class="form-control form-control-sm" accept="image/*" onchange="handleFileSelect(event)">
+        </div>
 
         <div id="statusAlert" class="alert mt-3 d-none" role="alert"></div>
       </div>
     </div>
 
-    <!-- उजवी बाजू: एक्स्ट्रॅक्ट झालेला डेटा -->
-    <div class="col-lg-7">
-      <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="card-title fw-semibold mb-0">२. औषधांची माहिती (Extracted Items)</h5>
-          <button class="btn btn-sm btn-outline-primary" onclick="addRow()">+ नवीन रो जोडा</button>
-        </div>
+    <!-- २. स्कॅन झालेला डेटा दाखवणारा फॉर्म -->
+    <div class="col-md-6 col-lg-6">
+      <div class="card p-4 result-card">
+        <h5 class="fw-bold text-dark mb-3">🔍 प्रॉडक्टची तपशीलवार माहिती</h5>
+        
+        <form id="productForm">
+          <div class="mb-2">
+            <label class="form-label fw-semibold text-secondary">औषधाचे नाव (Brand Name)</label>
+            <input type="text" id="brand_name" class="form-control" placeholder="उदा. Dolo 650">
+          </div>
 
-        <div class="table-responsive">
-          <table class="table table-bordered table-hover align-middle" id="itemsTable">
-            <thead>
-              <tr class="text-center">
-                <th style="min-width: 150px;">औषधाचे नाव</th>
-                <th style="min-width: 90px;">बॅच क्र.</th>
-                <th style="min-width: 80px;">Exp.</th>
-                <th style="min-width: 70px;">Qty</th>
-                <th style="min-width: 80px;">MRP</th>
-                <th style="min-width: 80px;">दर (Rate)</th>
-                <th style="min-width: 75px;">GST %</th>
-                <th style="min-width: 90px;">एकूण</th>
-                <th style="min-width: 50px;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="tableBody">
-              <tr>
-                <td colspan="9" class="text-center text-muted py-5">
-                  कोणतीही इमेज स्कॅन केलेली नाही.<br>कृपया डावीकडून बिल फोटो अपलोड करा.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold text-secondary">कंटेंट / घटक (Composition)</label>
+            <input type="text" id="composition" class="form-control" placeholder="उदा. Paracetamol 650mg">
+          </div>
 
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label fw-semibold text-secondary">किंमत (MRP ₹)</label>
+              <input type="number" step="0.01" id="mrp" class="form-control text-success fw-bold" placeholder="0.00">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold text-secondary">बॅच क्र. (Batch No)</label>
+              <input type="text" id="batch_no" class="form-control" placeholder="B123">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label fw-semibold text-secondary">Mfg Date</label>
+              <input type="text" id="mfg_date" class="form-control" placeholder="MM/YY">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold text-danger">Exp Date</label>
+              <input type="text" id="exp_date" class="form-control" placeholder="MM/YY">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary">कंपनीचे नाव (Manufacturer)</label>
+            <input type="text" id="manufacturer" class="form-control" placeholder="उदा. Cipla Ltd">
+          </div>
+
+          <button type="button" class="btn btn-success w-100 fw-bold" onclick="alert('डेटा सेव्ह झाला!')">💾 डेटा सेव्ह करा</button>
+        </form>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  // Deploy झालेली Apps Script Web App URL
+  // नवीन Deploy झालेली URL
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8uhN9m-zXxOR4F4TBxUHF-4TMyPHYBxZ-EZq9odsFP0AaGm3xZLUD5P73JujUvIga/exec";
 
-  let base64ImageData = "";
-  let imageMimeType = "image/jpeg";
+  const video = document.getElementById('videoElement');
+  const canvas = document.getElementById('canvasElement');
+  let currentBase64 = "";
 
-  // फोटोचा प्रिव्ह्यू दाखवणे
-  function previewImage(event) {
+  // १. कॅमेरा चालू करणे
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" } // मोबाईलवर बॅक कॅमेरा वापरण्यासाठी
+      });
+      video.srcObject = stream;
+      document.getElementById('captureBtn').disabled = false;
+      showAlert("कॅमेरा सुरू झाला आहे. प्रॉडक्ट समोर धरा.", "success");
+    } catch (err) {
+      showAlert("कॅमेरा अ‍ॅक्सेस मिळाला नाही: " + err.message, "danger");
+    }
+  }
+
+  // २. कॅमेऱ्यातून फोटो काढून AI ला पाठवणे
+  function captureAndScan() {
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    currentBase64 = dataUrl.split(',')[1];
+
+    sendToAI(currentBase64, "image/jpeg");
+  }
+
+  // ३. गॅलरीतून फोटो निवडल्यास
+  function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    imageMimeType = file.type || "image/jpeg";
     const reader = new FileReader();
-
     reader.onload = function(e) {
-      const img = document.getElementById("imagePreview");
-      img.src = e.target.result;
-      img.classList.remove("d-none");
-      
-      // Base64 स्ट्रींगमधून Header डेटा काढणे
-      base64ImageData = e.target.result.split(',')[1];
-      
-      document.getElementById("processBtn").disabled = false;
-      showAlert("फोटो निवडला गेला आहे. आता स्कॅन बटणावर क्लिक करा.", "info");
+      currentBase64 = e.target.result.split(',')[1];
+      sendToAI(currentBase64, file.type || "image/jpeg");
     };
-
     reader.readAsDataURL(file);
   }
 
-  // Web App वर डेटा पाठवून OCR प्रोसेसिंग करणे
-  async function uploadAndProcess() {
-    if (!base64ImageData) {
-      showAlert("कृपया प्रथम इमेज निवडा!", "danger");
-      return;
-    }
-
+  // ४. Apps Script Web App कडे इमेज पाठवणे
+  async function sendToAI(base64Data, mimeType) {
     setLoading(true);
-    showAlert("Gemini AI बिल स्कॅन करत आहे, कृपया काही सेकंद वाट पाहा...", "info");
+    showAlert("Gemini AI प्रॉडक्टवरील लेबल वाचत आहे...", "info");
 
     try {
-      // POST रिक्वेस्ट पाठवणे (CORS Bypass साठी URLSearchParams किंवा direct JSON)
       const response = await fetch(SCRIPT_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify({
-          image: base64ImageData,
-          mimeType: imageMimeType
-        })
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ image: base64Data, mimeType: mimeType })
       });
 
       const result = await response.json();
-
       setLoading(false);
 
       if (result.success) {
-        showAlert("डेटा यशस्वीरित्या एक्स्ट्रॅक्ट झाला आहे!", "success");
-        renderTable(result.data);
+        showAlert("माहिती यशस्वीरित्या मिळवली!", "success");
+        fillForm(result.data);
       } else {
-        showAlert("त्रुटी: " + (result.error || "डेटा एक्स्ट्रॅक्ट करता आला नाही."), "danger");
+        showAlert("त्रुटी: " + result.error, "danger");
       }
-
     } catch (err) {
       setLoading(false);
       showAlert("कनेक्शन एरर: " + err.message, "danger");
     }
   }
 
-  // टेबलमध्ये डेटा भरणे
-  function renderTable(data) {
-    const tbody = document.getElementById("tableBody");
-    tbody.innerHTML = "";
-
-    if (!data || data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">माहिती शोधता आली नाही.</td></tr>';
-      return;
-    }
-
-    data.forEach((item) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><input type="text" class="form-control form-control-sm" value="${item.item_name || ''}"></td>
-        <td><input type="text" class="form-control form-control-sm" value="${item.batch_no || ''}"></td>
-        <td><input type="text" class="form-control form-control-sm" value="${item.exp_date || ''}"></td>
-        <td><input type="number" class="form-control form-control-sm" value="${item.qty || 0}"></td>
-        <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.mrp || 0}"></td>
-        <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.rate || 0}"></td>
-        <td><input type="number" class="form-control form-control-sm" value="${item.gst_percent || 0}"></td>
-        <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.amount || 0}"></td>
-        <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRow(this)">✕</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
+  // ५. फॉर्ममध्ये माहिती भरणे
+  function fillForm(data) {
+    document.getElementById('brand_name').value = data.brand_name || '';
+    document.getElementById('composition').value = data.composition || '';
+    document.getElementById('mrp').value = data.mrp || 0;
+    document.getElementById('batch_no').value = data.batch_no || '';
+    document.getElementById('mfg_date').value = data.mfg_date || '';
+    document.getElementById('exp_date').value = data.exp_date || '';
+    document.getElementById('manufacturer').value = data.manufacturer || '';
   }
 
-  // नवीन रो जोडणे
-  function addRow() {
-    const tbody = document.getElementById("tableBody");
-    if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
-      tbody.innerHTML = "";
-    }
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><input type="text" class="form-control form-control-sm" value=""></td>
-      <td><input type="text" class="form-control form-control-sm" value=""></td>
-      <td><input type="text" class="form-control form-control-sm" value=""></td>
-      <td><input type="number" class="form-control form-control-sm" value="0"></td>
-      <td><input type="number" step="0.01" class="form-control form-control-sm" value="0"></td>
-      <td><input type="number" step="0.01" class="form-control form-control-sm" value="0"></td>
-      <td><input type="number" class="form-control form-control-sm" value="0"></td>
-      <td><input type="number" step="0.01" class="form-control form-control-sm" value="0"></td>
-      <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="deleteRow(this)">✕</button></td>
-    `;
-    tbody.appendChild(tr);
-  }
-
-  // रो डिलीट करणे
-  function deleteRow(btn) {
-    const row = btn.closest("tr");
-    row.remove();
-  }
-
-  // लोड होत असताना बटण आणि स्पिनर कंट्रोल
   function setLoading(isLoading) {
-    const btn = document.getElementById("processBtn");
+    const btn = document.getElementById("captureBtn");
     const spinner = document.getElementById("btnSpinner");
     const btnText = document.getElementById("btnText");
 
     btn.disabled = isLoading;
     if (isLoading) {
       spinner.classList.remove("d-none");
-      btnText.textContent = "प्रक्रिया सुरू आहे...";
+      btnText.textContent = " स्कॅन सुरू आहे...";
     } else {
       spinner.classList.add("d-none");
-      btnText.textContent = "स्कॅन आणि डेटा एक्स्ट्रॅक्ट करा";
+      btnText.textContent = "📸 फोटो काढा आणि स्कॅन करा";
     }
   }
 
-  // अलर्ट दाखवणे
   function showAlert(message, type) {
     const alertBox = document.getElementById("statusAlert");
-    alertBox.className = `alert alert-${type} mt-3`;
+    alertBox.className = `alert alert-${type} mt-2 py-2`;
     alertBox.textContent = message;
     alertBox.classList.remove("d-none");
   }
+
+  // पेज ओपन होताच आपोआप कॅमेरा स्टार्ट करणे
+  window.onload = startCamera;
 </script>
 
 </body>
